@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskTracker Lite — Микросервисы</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TaskTracker Lite</h1>
+            <p class="subtitle">Микросервисная архитектура</p>
+            <div class="services-status">
+                <span class="status-dot" id="statusUser"></span> User Service (3001)
+                <span class="status-dot" id="statusTask"></span> Task Service (3002)
+                <span class="status-dot" id="statusNotif"></span> Notification Service (3003)
+            </div>
+        </header>
+
+        <!-- Пользователи -->
+        <section class="panel">
+            <h2>Пользователи <span class="badge" id="userCount">0</span></h2>
+            <form id="userForm" class="inline-form">
+                <input type="text" id="userName" placeholder="Имя" required>
+                <input type="email" id="userEmail" placeholder="Email" required>
+                <button type="submit">Добавить</button>
+            </form>
+            <div id="userList" class="list"></div>
+        </section>
+
+        <!-- Задачи -->
+        <section class="panel">
+            <h2>Задачи <span class="badge" id="taskCount">0</span></h2>
+            <form id="taskForm" class="inline-form">
+                <input type="text" id="taskTitle" placeholder="Название" required>
+                <input type="text" id="taskDesc" placeholder="Описание">
+                <select id="taskPriority">
+                    <option value="low">Низкий</option>
+                    <option value="medium" selected>Средний</option>
+                    <option value="high">Высокий</option>
+                </select>
+                <select id="taskUser">
+                    <option value="">Без пользователя</option>
+                </select>
+                <button type="submit">Добавить</button>
+            </form>
+            <div class="filter-row">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="todo">К выполнению</button>
+                <button class="filter-btn" data-filter="in_progress">В работе</button>
+                <button class="filter-btn" data-filter="done">Выполнено</button>
+            </div>
+            <div id="taskList" class="list"></div>
+        </section>
+
+        <!-- Уведомления -->
+        <section class="panel">
+            <h2>Уведомления <span class="badge" id="notifCount">0</span></h2>
+            <div id="notifList" class="list"></div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
