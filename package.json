@@ -1,0 +1,16 @@
+{
+  "name": "tasktracker-lite",
+  "version": "1.0.0",
+  "description": "TaskTracker Lite — веб-приложение для управления задачами",
+  "main": "js/tasks.js",
+  "scripts": {
+    "test": "jest --verbose",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": ["tasktracker", "tasks", "ci-cd"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
