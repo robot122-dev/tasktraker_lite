@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,9 +11,37 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// In-memory storage
+// Database config
+const useDB = process.env.DB_HOST;
+let pool = null;
+
+if (useDB) {
+    pool = new Pool({
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 5432,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
+    });
+}
+
+// In-memory storage (fallback)
 let tasks = [];
 let nextId = 1;
+
+async function initDB() {
+    if (!pool) return;
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS tasks (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            description TEXT DEFAULT '',
+            status VARCHAR(20) DEFAULT 'todo',
+            priority VARCHAR(20) DEFAULT 'medium',
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    `);
+}
 
 // Swagger configuration
 const swaggerOptions = {
@@ -148,7 +177,21 @@ function validateTaskInput(body) {
  *               items:
  *                 $ref: '#/components/schemas/Task'
  */
-app.get('/api/tasks', (req, res) => {
+app.get('/api/tasks', async (req, res) => {
+    if (pool) {
+        let query = 'SELECT id, title, description, status, priority, created_at as "createdAt" FROM tasks';
+        const params = [];
+        if (req.query.status) {
+            if (!VALID_STATUSES.includes(req.query.status)) {
+                return res.status(400).json({ error: 'Invalid status' });
+            }
+            query += ' WHERE status = $1';
+            params.push(req.query.status);
+        }
+        query += ' ORDER BY id';
+        const result = await pool.query(query, params);
+        return res.json(result.rows);
+    }
     let result = tasks;
     if (req.query.status) {
         if (!VALID_STATUSES.includes(req.query.status)) {
@@ -181,8 +224,19 @@ app.get('/api/tasks', (req, res) => {
  *               items:
  *                 $ref: '#/components/schemas/Task'
  */
-app.get('/api/tasks/search', (req, res) => {
+app.get('/api/tasks/search', async (req, res) => {
     const query = (req.query.query || '').toLowerCase().trim();
+    if (pool) {
+        if (!query) {
+            const result = await pool.query('SELECT id, title, description, status, priority, created_at as "createdAt" FROM tasks ORDER BY id');
+            return res.json(result.rows);
+        }
+        const result = await pool.query(
+            'SELECT id, title, description, status, priority, created_at as "createdAt" FROM tasks WHERE LOWER(title) LIKE $1 OR LOWER(description) LIKE $1 ORDER BY id',
+            ['%' + query + '%']
+        );
+        return res.json(result.rows);
+    }
     if (!query) {
         return res.json(tasks);
     }
@@ -207,7 +261,18 @@ app.get('/api/tasks/search', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Statistics'
  */
-app.get('/api/tasks/statistics', (req, res) => {
+app.get('/api/tasks/statistics', async (req, res) => {
+    if (pool) {
+        const result = await pool.query(`
+            SELECT
+                COUNT(*)::int as total,
+                COUNT(*) FILTER (WHERE status = 'todo')::int as todo,
+                COUNT(*) FILTER (WHERE status = 'in_progress')::int as in_progress,
+                COUNT(*) FILTER (WHERE status = 'done')::int as done
+            FROM tasks
+        `);
+        return res.json(result.rows[0]);
+    }
     const total = tasks.length;
     const todo = tasks.filter(t => t.status === 'todo').length;
     const inProgress = tasks.filter(t => t.status === 'in_progress').length;
@@ -241,8 +306,18 @@ app.get('/api/tasks/statistics', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.get('/api/tasks/:id', (req, res) => {
+app.get('/api/tasks/:id', async (req, res) => {
     const id = parseInt(req.params.id);
+    if (pool) {
+        const result = await pool.query(
+            'SELECT id, title, description, status, priority, created_at as "createdAt" FROM tasks WHERE id = $1',
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        return res.json(result.rows[0]);
+    }
     const task = tasks.find(t => t.id === id);
     if (!task) {
         return res.status(404).json({ error: 'Task not found' });
@@ -276,10 +351,18 @@ app.get('/api/tasks/:id', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', async (req, res) => {
     const error = validateTaskInput(req.body);
     if (error) {
         return res.status(400).json({ error });
+    }
+
+    if (pool) {
+        const result = await pool.query(
+            'INSERT INTO tasks (title, description, status, priority) VALUES ($1, $2, $3, $4) RETURNING id, title, description, status, priority, created_at as "createdAt"',
+            [req.body.title.trim(), (req.body.description || '').trim(), 'todo', req.body.priority || 'medium']
+        );
+        return res.status(201).json(result.rows[0]);
     }
 
     const task = {
@@ -324,8 +407,30 @@ app.post('/api/tasks', (req, res) => {
  *       404:
  *         description: Задача не найдена
  */
-app.put('/api/tasks/:id', (req, res) => {
+app.put('/api/tasks/:id', async (req, res) => {
     const id = parseInt(req.params.id);
+
+    if (pool) {
+        const existing = await pool.query('SELECT * FROM tasks WHERE id = $1', [id]);
+        if (existing.rows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        const task = existing.rows[0];
+        const error = validateTaskInput({ title: req.body.title || task.title, ...req.body });
+        if (error) return res.status(400).json({ error });
+
+        const title = req.body.title !== undefined ? req.body.title.trim() : task.title;
+        const description = req.body.description !== undefined ? req.body.description.trim() : task.description;
+        const status = req.body.status || task.status;
+        const priority = req.body.priority || task.priority;
+
+        const result = await pool.query(
+            'UPDATE tasks SET title=$1, description=$2, status=$3, priority=$4 WHERE id=$5 RETURNING id, title, description, status, priority, created_at as "createdAt"',
+            [title, description, status, priority, id]
+        );
+        return res.json(result.rows[0]);
+    }
+
     const task = tasks.find(t => t.id === id);
     if (!task) {
         return res.status(404).json({ error: 'Task not found' });
@@ -378,15 +483,27 @@ app.put('/api/tasks/:id', (req, res) => {
  *       404:
  *         description: Задача не найдена
  */
-app.patch('/api/tasks/:id/status', (req, res) => {
+app.patch('/api/tasks/:id/status', async (req, res) => {
     const id = parseInt(req.params.id);
-    const task = tasks.find(t => t.id === id);
-    if (!task) {
-        return res.status(404).json({ error: 'Task not found' });
-    }
 
     if (!req.body.status || !VALID_STATUSES.includes(req.body.status)) {
         return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    if (pool) {
+        const result = await pool.query(
+            'UPDATE tasks SET status = $1 WHERE id = $2 RETURNING id',
+            [req.body.status, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        return res.json({ message: 'Статус успешно изменен' });
+    }
+
+    const task = tasks.find(t => t.id === id);
+    if (!task) {
+        return res.status(404).json({ error: 'Task not found' });
     }
 
     task.status = req.body.status;
@@ -415,8 +532,17 @@ app.patch('/api/tasks/:id/status', (req, res) => {
  *       404:
  *         description: Задача не найдена
  */
-app.delete('/api/tasks/:id', (req, res) => {
+app.delete('/api/tasks/:id', async (req, res) => {
     const id = parseInt(req.params.id);
+
+    if (pool) {
+        const result = await pool.query('DELETE FROM tasks WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        return res.json({ message: 'Задача удалена' });
+    }
+
     const index = tasks.findIndex(t => t.id === id);
     if (index === -1) {
         return res.status(404).json({ error: 'Task not found' });
@@ -431,9 +557,20 @@ function setTasks(newTasks) { tasks = newTasks; }
 function resetId() { nextId = 1; }
 
 if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`TaskTracker Lite API: http://localhost:${PORT}`);
-        console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+    initDB().then(() => {
+        app.listen(PORT, () => {
+            console.log(`TaskTracker Lite API: http://localhost:${PORT}`);
+            console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+            console.log(`Database: ${useDB ? 'PostgreSQL (' + useDB + ')' : 'In-Memory'}`);
+        });
+    }).catch(err => {
+        console.error('Failed to init DB:', err.message);
+        console.log('Falling back to in-memory storage');
+        app.listen(PORT, () => {
+            console.log(`TaskTracker Lite API: http://localhost:${PORT}`);
+            console.log(`Swagger docs: http://localhost:${PORT}/api-docs`);
+            console.log('Database: In-Memory (fallback)');
+        });
     });
 }
 

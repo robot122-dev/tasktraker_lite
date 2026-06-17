@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+coverage
+cypress
+cypress.config.js
+cypress/screenshots
+cypress/videos
+__tests__
+.git
+.github
+*.md
+run-cypress.js

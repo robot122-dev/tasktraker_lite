@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tasktracker_db
+    environment:
+      POSTGRES_USER: tasktracker
+      POSTGRES_PASSWORD: tasktracker123
+      POSTGRES_DB: tasktracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasktracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: tasktracker_app
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: tasktracker
+      DB_PASSWORD: tasktracker123
+      DB_NAME: tasktracker
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
