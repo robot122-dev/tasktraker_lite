@@ -119,7 +119,7 @@ describe('deleteTask', () => {
 
 describe('getNextStatus', () => {
     test('todo -> in_progress', () => {
-        expect(getNextStatus('todo')).toBe('done');
+        expect(getNextStatus('todo')).toBe('in_progress');
     });
 
     test('in_progress -> done', () => {
