@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "jest --verbose --forceExit",
+    "test:api": "jest __tests__/api.test.js --verbose --forceExit",
+    "test:solid": "jest __tests__/solid/ __tests__/bad-task-manager.test.js --verbose --forceExit",
     "test:coverage": "jest --coverage --forceExit"
   },
   "keywords": ["tasktracker", "tasks", "rest-api", "swagger"],
