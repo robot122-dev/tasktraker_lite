@@ -1,0 +1,112 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Microservices" id="microservices">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Клиент -->
+        <mxCell id="10" value="&lt;b&gt;Клиент&lt;/b&gt;&lt;br&gt;Браузер / Postman" style="shape=mxgraph.cisco.computer;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="700" y="20" width="80" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- API Gateway -->
+        <mxCell id="20" value="&lt;b&gt;API Gateway&lt;/b&gt;&lt;br&gt;Порты: 3001, 3002, 3003" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="540" y="120" width="400" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Стрелка клиент -> gateway -->
+        <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#333333;" edge="1" source="10" target="20" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- User Service -->
+        <mxCell id="30" value="&lt;b&gt;User Service&lt;/b&gt;&lt;br&gt;Node.js + Express&lt;br&gt;Порт: 3001" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="220" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Task Service -->
+        <mxCell id="40" value="&lt;b&gt;Task Service&lt;/b&gt;&lt;br&gt;Node.js + Express&lt;br&gt;Порт: 3002" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="500" y="220" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Notification Service -->
+        <mxCell id="50" value="&lt;b&gt;Notification Service&lt;/b&gt;&lt;br&gt;Node.js + Express&lt;br&gt;Порт: 3003" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="900" y="220" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Стрелки gateway -> сервисы -->
+        <mxCell id="31" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#82b366;fontSize=10;fontColor=#82b366;" edge="1" source="20" target="30" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="41" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#d6b656;fontSize=10;fontColor=#d6b656;" edge="1" source="20" target="40" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="51" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;fontSize=10;fontColor=#9673a6;" edge="1" source="20" target="50" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Стрелка Task -> User (синхронный вызов) -->
+        <mxCell id="60" value="HTTP GET /api/users/:id&#xa;(проверка пользователя)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#b85450;dashed=1;fontSize=10;fontColor=#b85450;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="40" target="30" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="260"/>
+              <mxPoint x="450" y="260"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Стрелка Task -> Notification (асинхронный вызов) -->
+        <mxCell id="70" value="POST /api/notifications&#xa;(уведомление о задаче)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;dashed=1;dashPattern=8 4;fontSize=10;fontColor=#9673a6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="40" target="50" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="850" y="260"/>
+              <mxPoint x="850" y="260"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- User DB -->
+        <mxCell id="35" value="&lt;b&gt;users&lt;/b&gt;&lt;br&gt;PostgreSQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="140" y="360" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="36" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="30" target="35" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Task DB -->
+        <mxCell id="45" value="&lt;b&gt;tasks&lt;/b&gt;&lt;br&gt;PostgreSQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="540" y="360" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="46" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#d6b656;" edge="1" source="40" target="45" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Notification DB -->
+        <mxCell id="55" value="&lt;b&gt;notifications&lt;/b&gt;&lt;br&gt;PostgreSQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="940" y="360" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="56" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="50" target="55" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Docker Compose -->
+        <mxCell id="80" value="&lt;b&gt;Docker Compose&lt;/b&gt; — 6 контейнеров (3 сервиса + 3 БД)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="60" y="180" width="1120" height="280" as="geometry"/>
+        </mxCell>
+
+        <!-- Легенда -->
+        <mxCell id="90" value="&lt;b&gt;Легенда:&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="500" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="91" value="Сплошная стрелка — синхронный REST-вызов" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="530" width="300" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="92" value="Пунктирная стрелка — асинхронный вызов (fire-and-forget)" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="555" width="380" height="20" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

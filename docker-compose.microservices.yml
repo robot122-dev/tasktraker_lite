@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # PostgreSQL для User Service
+  users-db:
+    image: postgres:16-alpine
+    container_name: users-db
+    environment:
+      POSTGRES_USER: tasktracker
+      POSTGRES_PASSWORD: tasktracker123
+      POSTGRES_DB: users
+    ports:
+      - "5433:5432"
+    volumes:
+      - users-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasktracker -d users"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL для Task Service
+  tasks-db:
+    image: postgres:16-alpine
+    container_name: tasks-db
+    environment:
+      POSTGRES_USER: tasktracker
+      POSTGRES_PASSWORD: tasktracker123
+      POSTGRES_DB: tasks
+    ports:
+      - "5434:5432"
+    volumes:
+      - tasks-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasktracker -d tasks"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL для Notification Service
+  notifications-db:
+    image: postgres:16-alpine
+    container_name: notifications-db
+    environment:
+      POSTGRES_USER: tasktracker
+      POSTGRES_PASSWORD: tasktracker123
+      POSTGRES_DB: notifications
+    ports:
+      - "5435:5432"
+    volumes:
+      - notifications-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasktracker -d notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # User Service
+  user-service:
+    build: ./services/user-service
+    container_name: user-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: users-db
+      DB_PORT: 5432
+      DB_USER: tasktracker
+      DB_PASSWORD: tasktracker123
+      DB_NAME: users
+    depends_on:
+      users-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Task Service
+  task-service:
+    build: ./services/task-service
+    container_name: task-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DB_HOST: tasks-db
+      DB_PORT: 5432
+      DB_USER: tasktracker
+      DB_PASSWORD: tasktracker123
+      DB_NAME: tasks
+      USER_SERVICE_URL: http://user-service:3001
+      NOTIFICATION_SERVICE_URL: http://notification-service:3003
+    depends_on:
+      tasks-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+
+  # Notification Service
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: notifications-db
+      DB_PORT: 5432
+      DB_USER: tasktracker
+      DB_PASSWORD: tasktracker123
+      DB_NAME: notifications
+    depends_on:
+      notifications-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  users-pgdata:
+  tasks-pgdata:
+  notifications-pgdata:
