@@ -1,22 +1,37 @@
-var tasks = loadTasks();
+var API_URL = '/api/tasks';
+var tasks = [];
 var currentFilter = 'all';
 var searchQuery = '';
 
+async function fetchTasks() {
+    var url = API_URL;
+    if (currentFilter && currentFilter !== 'all') {
+        url += '?status=' + currentFilter;
+    }
+    var res = await fetch(url);
+    tasks = await res.json();
+    renderTasks();
+}
+
+async function fetchSearch(query) {
+    if (!query) {
+        return fetchTasks();
+    }
+    var res = await fetch(API_URL + '/search?query=' + encodeURIComponent(query));
+    tasks = await res.json();
+    renderTasks();
+}
+
 function renderTasks() {
     var container = document.getElementById('taskContainer');
-    var emptyMessage = document.getElementById('emptyMessage');
-
-    var filtered = filterTasks(tasks, currentFilter);
-    filtered = searchTasks(filtered, searchQuery);
-
     container.innerHTML = '';
 
-    if (filtered.length === 0) {
+    if (tasks.length === 0) {
         container.appendChild(createEmptyMessage());
         return;
     }
 
-    filtered.forEach(function (task) {
+    tasks.forEach(function (task) {
         container.appendChild(createTaskElement(task));
     });
 }
@@ -44,8 +59,8 @@ function createTaskElement(task) {
             '</div>' +
         '</div>' +
         '<div class="task-actions">' +
-            '<button class="btn-status" onclick="handleStatusChange(\'' + task.id + '\')">Сменить статус</button>' +
-            '<button class="btn-delete" onclick="handleDelete(\'' + task.id + '\')">Удалить</button>' +
+            '<button class="btn-status" onclick="handleStatusChange(' + task.id + ')">Сменить статус</button>' +
+            '<button class="btn-delete" onclick="handleDelete(' + task.id + ')">Удалить</button>' +
         '</div>';
 
     return div;
@@ -65,58 +80,82 @@ function formatDate(isoString) {
     return day + '.' + month + '.' + year;
 }
 
-function handleAddTask(e) {
+function getStatusLabel(status) {
+    var labels = { todo: 'К выполнению', in_progress: 'В работе', done: 'Выполнено' };
+    return labels[status] || status;
+}
+
+function getPriorityLabel(priority) {
+    var labels = { low: 'Низкий', medium: 'Средний', high: 'Высокий' };
+    return labels[priority] || priority;
+}
+
+async function handleAddTask(e) {
     e.preventDefault();
     var titleInput = document.getElementById('taskTitle');
     var descInput = document.getElementById('taskDescription');
     var priorityInput = document.getElementById('taskPriority');
 
     var title = titleInput.value.trim();
-    if (!title) {
-        return;
-    }
+    if (!title) return;
 
-    addTask(tasks, title, descInput.value, priorityInput.value);
-    saveTasks(tasks);
-    renderTasks();
+    await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            title: title,
+            description: descInput.value,
+            priority: priorityInput.value
+        })
+    });
 
     titleInput.value = '';
     descInput.value = '';
     priorityInput.value = 'medium';
+    fetchTasks();
 }
 
-function handleDelete(taskId) {
-    deleteTask(tasks, taskId);
-    saveTasks(tasks);
-    renderTasks();
+async function handleDelete(taskId) {
+    await fetch(API_URL + '/' + taskId, { method: 'DELETE' });
+    fetchTasks();
 }
 
-function handleStatusChange(taskId) {
-    changeStatus(tasks, taskId);
-    saveTasks(tasks);
-    renderTasks();
+async function handleStatusChange(taskId) {
+    var task = tasks.find(function (t) { return t.id === taskId; });
+    if (!task) return;
+    var order = ['todo', 'in_progress', 'done'];
+    var idx = order.indexOf(task.status);
+    var next = (idx === -1 || idx === order.length - 1) ? 'todo' : order[idx + 1];
+    await fetch(API_URL + '/' + taskId + '/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next })
+    });
+    fetchTasks();
 }
 
 function handleFilter(e) {
-    var filterBtns = document.querySelectorAll('.filter-btn');
-    filterBtns.forEach(function (btn) {
+    document.querySelectorAll('.filter-btn').forEach(function (btn) {
         btn.classList.remove('active');
     });
     e.target.classList.add('active');
     currentFilter = e.target.getAttribute('data-filter');
-    renderTasks();
+    fetchTasks();
 }
 
+var searchTimeout;
 function handleSearch(e) {
+    clearTimeout(searchTimeout);
     searchQuery = e.target.value;
-    renderTasks();
+    searchTimeout = setTimeout(function () {
+        fetchSearch(searchQuery);
+    }, 300);
 }
 
 document.getElementById('taskForm').addEventListener('submit', handleAddTask);
 document.getElementById('searchInput').addEventListener('input', handleSearch);
-
 document.querySelectorAll('.filter-btn').forEach(function (btn) {
     btn.addEventListener('click', handleFilter);
 });
 
-renderTasks();
+fetchTasks();
