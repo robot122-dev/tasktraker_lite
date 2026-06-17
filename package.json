@@ -6,11 +6,21 @@
   "scripts": {
     "start": "node server.js",
     "test": "jest --verbose --forceExit",
+    "test:unit": "jest __tests__/tasks.test.js __tests__/solid/ __tests__/bad-task-manager.test.js --verbose --forceExit",
+    "test:integration": "jest __tests__/api.test.js __tests__/integration.test.js --verbose --forceExit",
     "test:api": "jest __tests__/api.test.js --verbose --forceExit",
     "test:solid": "jest __tests__/solid/ __tests__/bad-task-manager.test.js --verbose --forceExit",
-    "test:coverage": "jest --coverage --forceExit"
+    "test:coverage": "jest --coverage --forceExit",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "test:ui": "cypress run --spec cypress/e2e/tasks.cy.js"
   },
-  "keywords": ["tasktracker", "tasks", "rest-api", "swagger"],
+  "keywords": [
+    "tasktracker",
+    "tasks",
+    "rest-api",
+    "swagger"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -20,6 +30,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "cypress": "^15.17.0",
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
   }

@@ -98,6 +98,13 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
+// Reset (for testing)
+app.post('/api/tasks/reset', (req, res) => {
+    tasks = [];
+    nextId = 1;
+    res.json({ message: 'Reset complete' });
+});
+
 // Validation helpers
 const VALID_STATUSES = ['todo', 'in_progress', 'done'];
 const VALID_PRIORITIES = ['low', 'medium', 'high'];
